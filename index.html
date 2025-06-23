@@ -2,14 +2,6 @@
 <html>
 <head>
   <title>Spark's Toolkit 🔧</title>
-  <link rel="manifest" href="manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(() => console.log("✅ Service Worker Registered"))
-      .catch(err => console.error("❌ Service Worker failed:", err));
-  }
-</script>
   <style>
     body {
       font-family: sans-serif;
@@ -22,13 +14,14 @@
       background: var(--header, #222);
       padding: 10px;
     }
-    .tabs button {
+    .tabs button, .tabs select {
       flex: 1;
       padding: 10px;
       background: var(--tab-bg, #333);
       color: var(--tab-text, white);
       border: none;
       cursor: pointer;
+      font-size: 14px;
     }
     .tabs button:hover {
       background: var(--tab-hover, #444);
@@ -47,6 +40,9 @@
       border: none;
     }
     .hidden { display: none; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 10px 0; border: 1px solid var(--tab-bg); padding: 10px; border-radius: 8px; background: var(--tab-bg); color: var(--tab-text); }
+    .btn-small { padding: 4px 8px; font-size: 12px; margin-left: 10px; }
   </style>
 </head>
 <body>
@@ -65,7 +61,12 @@
     </select>
   </div>
 
-  <div id="home" class="tab">Welcome to <b>Spark's Toolkit</b> — your all-in-one offline utility box! 🧰</div>
+  <div id="home" class="tab">
+    <h2>Welcome to <b>Spark's Toolkit</b> 🧰</h2>
+    <p>Your all-in-one offline toolset — just the way Spark likes it! 💫</p>
+    <button onclick="exportData()">📤 Export Data</button>
+    <input type="file" id="importFile" onchange="importData(this.files[0])" />
+  </div>
 
   <div id="diary" class="tab">
     <h2>📔 Diary</h2>
@@ -123,7 +124,6 @@
       document.getElementById(id).style.display = 'block';
     }
 
-    // Code space save
     document.getElementById("codeEditor").value = localStorage.getItem("code") || "";
     document.getElementById("codeEditor").addEventListener("input", () => {
       localStorage.setItem("code", document.getElementById("codeEditor").value);
@@ -131,6 +131,7 @@
 
     // Diary
     let diaryPass = localStorage.getItem("diaryPass") || null;
+    let editingDiaryIndex = null;
     function unlockDiary() {
       const input = document.getElementById("diaryPassInput").value;
       if (!diaryPass) {
@@ -147,18 +148,42 @@
       const title = document.getElementById("diaryTitle").value;
       const content = document.getElementById("diaryContent").value;
       const notes = JSON.parse(localStorage.getItem("diaryNotes") || "[]");
-      notes.push({ title, content, date: new Date().toLocaleString() });
+      if (editingDiaryIndex !== null) {
+        notes[editingDiaryIndex] = { title, content, date: new Date().toLocaleString() };
+        editingDiaryIndex = null;
+      } else {
+        notes.push({ title, content, date: new Date().toLocaleString() });
+      }
       localStorage.setItem("diaryNotes", JSON.stringify(notes));
       loadDiary();
+      document.getElementById("diaryTitle").value = "";
+      document.getElementById("diaryContent").value = "";
     }
     function loadDiary() {
       const notes = JSON.parse(localStorage.getItem("diaryNotes") || "[]");
       const list = document.getElementById("diaryList");
-      list.innerHTML = notes.map(n => `<li><b>${n.title}</b> (${n.date}):<br>${n.content}</li>`).join('');
+      list.innerHTML = notes.map((n, i) =>
+        `<li><b>${n.title}</b> (${n.date})<br>${n.content}<br>
+         <button class='btn-small' onclick='editDiary(${i})'>Edit</button>
+         <button class='btn-small' onclick='deleteDiary(${i})'>Delete</button>
+         </li>`).join('');
+    }
+    function editDiary(i) {
+      const note = JSON.parse(localStorage.getItem("diaryNotes"))[i];
+      document.getElementById("diaryTitle").value = note.title;
+      document.getElementById("diaryContent").value = note.content;
+      editingDiaryIndex = i;
+    }
+    function deleteDiary(i) {
+      const notes = JSON.parse(localStorage.getItem("diaryNotes") || "[]");
+      notes.splice(i, 1);
+      localStorage.setItem("diaryNotes", JSON.stringify(notes));
+      loadDiary();
     }
 
     // Vault
     let vaultPass = localStorage.getItem("vaultPass") || null;
+    let editingVaultIndex = null;
     function unlockVault() {
       const input = document.getElementById("vaultPassInput").value;
       if (!vaultPass) {
@@ -176,17 +201,41 @@
       const user = document.getElementById("vaultUser").value;
       const pwd = document.getElementById("vaultPwd").value;
       const entries = JSON.parse(localStorage.getItem("vaultData") || "[]");
-      entries.push({ site, user, pwd });
+      if (editingVaultIndex !== null) {
+        entries[editingVaultIndex] = { site, user, pwd };
+        editingVaultIndex = null;
+      } else {
+        entries.push({ site, user, pwd });
+      }
       localStorage.setItem("vaultData", JSON.stringify(entries));
       loadVault();
+      document.getElementById("vaultSite").value = "";
+      document.getElementById("vaultUser").value = "";
+      document.getElementById("vaultPwd").value = "";
     }
     function loadVault() {
       const entries = JSON.parse(localStorage.getItem("vaultData") || "[]");
       const list = document.getElementById("vaultList");
-      list.innerHTML = entries.map(e => `<li><b>${e.site}</b><br>User: ${e.user}<br>Pass: ${e.pwd}</li>`).join('');
+      list.innerHTML = entries.map((e, i) =>
+        `<li><b>${e.site}</b><br>User: ${e.user}<br>Pass: ${e.pwd}<br>
+         <button class='btn-small' onclick='editVault(${i})'>Edit</button>
+         <button class='btn-small' onclick='deleteVault(${i})'>Delete</button>
+         </li>`).join('');
+    }
+    function editVault(i) {
+      const e = JSON.parse(localStorage.getItem("vaultData"))[i];
+      document.getElementById("vaultSite").value = e.site;
+      document.getElementById("vaultUser").value = e.user;
+      document.getElementById("vaultPwd").value = e.pwd;
+      editingVaultIndex = i;
+    }
+    function deleteVault(i) {
+      const entries = JSON.parse(localStorage.getItem("vaultData") || "[]");
+      entries.splice(i, 1);
+      localStorage.setItem("vaultData", JSON.stringify(entries));
+      loadVault();
     }
 
-    // Converter
     function convertTemp() {
       const val = parseFloat(document.getElementById("tempInput").value);
       const unit = document.getElementById("tempUnit").value;
@@ -204,7 +253,35 @@
       }
     }
 
-    // Themes
+    function exportData() {
+      const data = {
+        diaryPass, vaultPass,
+        diaryNotes: localStorage.getItem("diaryNotes"),
+        vaultData: localStorage.getItem("vaultData"),
+        code: localStorage.getItem("code")
+      };
+      const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "spark-toolkit-backup.json";
+      a.click();
+    }
+
+    function importData(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = JSON.parse(e.target.result);
+        localStorage.setItem("diaryPass", data.diaryPass);
+        localStorage.setItem("vaultPass", data.vaultPass);
+        localStorage.setItem("diaryNotes", data.diaryNotes);
+        localStorage.setItem("vaultData", data.vaultData);
+        localStorage.setItem("code", data.code);
+        alert("Data imported! Reload the app to see changes.");
+      }
+      reader.readAsText(file);
+    }
+
     function setTheme(name) {
       const root = document.documentElement.style;
       if (name === "light") {
