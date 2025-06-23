@@ -14,29 +14,30 @@
     body {
       font-family: sans-serif;
       margin: 0;
-      background: #f4f4f4;
+      background: var(--bg, #f4f4f4);
+      color: var(--text, #000);
     }
     .tabs {
       display: flex;
-      background: #222;
+      background: var(--header, #222);
       padding: 10px;
     }
     .tabs button {
       flex: 1;
       padding: 10px;
-      background: #333;
-      color: white;
+      background: var(--tab-bg, #333);
+      color: var(--tab-text, white);
       border: none;
       cursor: pointer;
     }
     .tabs button:hover {
-      background: #444;
+      background: var(--tab-hover, #444);
     }
     .tab {
       display: none;
       padding: 20px;
     }
-    textarea, input {
+    textarea, input, select {
       width: 100%;
       margin: 10px 0;
       padding: 10px;
@@ -45,6 +46,7 @@
     iframe {
       border: none;
     }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -55,15 +57,28 @@
     <button onclick="showTab('vault')">🔐 Passwords</button>
     <button onclick="showTab('converter')">🌡️ Temp Converter</button>
     <button onclick="showTab('apps')">🧩 App Hub</button>
+    <select onchange="setTheme(this.value)">
+      <option value="light">🌞 Light</option>
+      <option value="dark">🌑 Dark</option>
+      <option value="rainbow">🌈 Rainbow</option>
+      <option value="matrix">💻 Matrix</option>
+    </select>
   </div>
 
   <div id="home" class="tab">Welcome to <b>Spark's Toolkit</b> — your all-in-one offline utility box! 🧰</div>
 
   <div id="diary" class="tab">
     <h2>📔 Diary</h2>
-    <input type="password" id="diaryPassword" placeholder="Enter password to unlock" />
-    <textarea id="diaryEntry" rows="10" placeholder="Write your secrets here..."></textarea>
-    <button onclick="saveDiary()">Save Diary</button>
+    <div id="diaryLock">
+      <input type="password" id="diaryPassInput" placeholder="Enter diary password" />
+      <button onclick="unlockDiary()">Unlock</button>
+    </div>
+    <div id="diaryUnlocked" class="hidden">
+      <input type="text" id="diaryTitle" placeholder="Note title">
+      <textarea id="diaryContent" rows="5" placeholder="Write your note..."></textarea>
+      <button onclick="saveDiaryNote()">Save Note</button>
+      <ul id="diaryList"></ul>
+    </div>
   </div>
 
   <div id="code" class="tab">
@@ -73,10 +88,17 @@
 
   <div id="vault" class="tab">
     <h2>🔐 Password Vault</h2>
-    <input type="password" id="vaultPassword" placeholder="Enter master password" />
-    <input type="text" id="vaultEntry" placeholder="Website - Username - Password" />
-    <button onclick="saveVault()">Save Entry</button>
-    <textarea id="vaultData" rows="6" readonly></textarea>
+    <div id="vaultLock">
+      <input type="password" id="vaultPassInput" placeholder="Enter master password" />
+      <button onclick="unlockVault()">Unlock</button>
+    </div>
+    <div id="vaultUnlocked" class="hidden">
+      <input type="text" id="vaultSite" placeholder="Website">
+      <input type="text" id="vaultUser" placeholder="Username">
+      <input type="text" id="vaultPwd" placeholder="Password">
+      <button onclick="saveVaultEntry()">Save Entry</button>
+      <ul id="vaultList"></ul>
+    </div>
   </div>
 
   <div id="converter" class="tab">
@@ -101,41 +123,70 @@
       document.getElementById(id).style.display = 'block';
     }
 
-    // Diary functions
-    function saveDiary() {
-      const pass = document.getElementById("diaryPassword").value;
-      const entry = document.getElementById("diaryEntry").value;
-      if (pass === 'sparkdiary') {
-        localStorage.setItem("diary", entry);
-        alert("Diary saved!");
-      } else {
-        alert("Wrong password!");
-      }
-    }
-    document.getElementById("diaryEntry").value = localStorage.getItem("diary") || "";
-
-    // Code Space
+    // Code space save
     document.getElementById("codeEditor").value = localStorage.getItem("code") || "";
     document.getElementById("codeEditor").addEventListener("input", () => {
       localStorage.setItem("code", document.getElementById("codeEditor").value);
     });
 
-    // Vault
-    function saveVault() {
-      const pass = document.getElementById("vaultPassword").value;
-      const entry = document.getElementById("vaultEntry").value;
-      if (pass === 'sparkvault') {
-        let data = localStorage.getItem("vault") || "";
-        data += entry + "\n";
-        localStorage.setItem("vault", data);
-        document.getElementById("vaultData").value = data;
-      } else {
-        alert("Wrong master password!");
+    // Diary
+    let diaryPass = localStorage.getItem("diaryPass") || null;
+    function unlockDiary() {
+      const input = document.getElementById("diaryPassInput").value;
+      if (!diaryPass) {
+        diaryPass = input;
+        localStorage.setItem("diaryPass", input);
       }
+      if (input === diaryPass) {
+        document.getElementById("diaryLock").classList.add("hidden");
+        document.getElementById("diaryUnlocked").classList.remove("hidden");
+        loadDiary();
+      } else alert("Wrong password");
     }
-    document.getElementById("vaultData").value = localStorage.getItem("vault") || "";
+    function saveDiaryNote() {
+      const title = document.getElementById("diaryTitle").value;
+      const content = document.getElementById("diaryContent").value;
+      const notes = JSON.parse(localStorage.getItem("diaryNotes") || "[]");
+      notes.push({ title, content, date: new Date().toLocaleString() });
+      localStorage.setItem("diaryNotes", JSON.stringify(notes));
+      loadDiary();
+    }
+    function loadDiary() {
+      const notes = JSON.parse(localStorage.getItem("diaryNotes") || "[]");
+      const list = document.getElementById("diaryList");
+      list.innerHTML = notes.map(n => `<li><b>${n.title}</b> (${n.date}):<br>${n.content}</li>`).join('');
+    }
 
-    // Temperature converter
+    // Vault
+    let vaultPass = localStorage.getItem("vaultPass") || null;
+    function unlockVault() {
+      const input = document.getElementById("vaultPassInput").value;
+      if (!vaultPass) {
+        vaultPass = input;
+        localStorage.setItem("vaultPass", input);
+      }
+      if (input === vaultPass) {
+        document.getElementById("vaultLock").classList.add("hidden");
+        document.getElementById("vaultUnlocked").classList.remove("hidden");
+        loadVault();
+      } else alert("Wrong password");
+    }
+    function saveVaultEntry() {
+      const site = document.getElementById("vaultSite").value;
+      const user = document.getElementById("vaultUser").value;
+      const pwd = document.getElementById("vaultPwd").value;
+      const entries = JSON.parse(localStorage.getItem("vaultData") || "[]");
+      entries.push({ site, user, pwd });
+      localStorage.setItem("vaultData", JSON.stringify(entries));
+      loadVault();
+    }
+    function loadVault() {
+      const entries = JSON.parse(localStorage.getItem("vaultData") || "[]");
+      const list = document.getElementById("vaultList");
+      list.innerHTML = entries.map(e => `<li><b>${e.site}</b><br>User: ${e.user}<br>Pass: ${e.pwd}</li>`).join('');
+    }
+
+    // Converter
     function convertTemp() {
       const val = parseFloat(document.getElementById("tempInput").value);
       const unit = document.getElementById("tempUnit").value;
@@ -150,6 +201,40 @@
       } else {
         result = (val - 32) * 5 / 9;
         document.getElementById("tempResult").innerText = `${val}°F = ${result.toFixed(2)}°C`;
+      }
+    }
+
+    // Themes
+    function setTheme(name) {
+      const root = document.documentElement.style;
+      if (name === "light") {
+        root.setProperty('--bg', '#ffffff');
+        root.setProperty('--text', '#000');
+        root.setProperty('--header', '#eee');
+        root.setProperty('--tab-bg', '#ccc');
+        root.setProperty('--tab-text', '#000');
+        root.setProperty('--tab-hover', '#bbb');
+      } else if (name === "dark") {
+        root.setProperty('--bg', '#121212');
+        root.setProperty('--text', '#eee');
+        root.setProperty('--header', '#222');
+        root.setProperty('--tab-bg', '#333');
+        root.setProperty('--tab-text', '#fff');
+        root.setProperty('--tab-hover', '#444');
+      } else if (name === "rainbow") {
+        root.setProperty('--bg', '#fff0f5');
+        root.setProperty('--text', '#800080');
+        root.setProperty('--header', '#ff69b4');
+        root.setProperty('--tab-bg', '#ffb6c1');
+        root.setProperty('--tab-text', '#800080');
+        root.setProperty('--tab-hover', '#ff1493');
+      } else if (name === "matrix") {
+        root.setProperty('--bg', '#000');
+        root.setProperty('--text', '#0f0');
+        root.setProperty('--header', '#003300');
+        root.setProperty('--tab-bg', '#002200');
+        root.setProperty('--tab-text', '#0f0');
+        root.setProperty('--tab-hover', '#004400');
       }
     }
 
