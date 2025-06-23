@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Spark's Toolkit 🔧</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+    }
+    .tabs {
+      display: flex;
+      background: #222;
+      padding: 10px;
+    }
+    .tabs button {
+      flex: 1;
+      padding: 10px;
+      background: #333;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .tabs button:hover {
+      background: #444;
+    }
+    .tab {
+      display: none;
+      padding: 20px;
+    }
+    textarea, input {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+    }
+    iframe {
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="tabs">
+    <button onclick="showTab('home')">🏠 Home</button>
+    <button onclick="showTab('diary')">📔 Diary</button>
+    <button onclick="showTab('code')">💻 Code Space</button>
+    <button onclick="showTab('vault')">🔐 Passwords</button>
+    <button onclick="showTab('converter')">🌡️ Temp Converter</button>
+    <button onclick="showTab('apps')">🧩 App Hub</button>
+  </div>
+
+  <div id="home" class="tab">Welcome to <b>Spark's Toolkit</b> — your all-in-one offline utility box! 🧰</div>
+
+  <div id="diary" class="tab">
+    <h2>📔 Diary</h2>
+    <input type="password" id="diaryPassword" placeholder="Enter password to unlock" />
+    <textarea id="diaryEntry" rows="10" placeholder="Write your secrets here..."></textarea>
+    <button onclick="saveDiary()">Save Diary</button>
+  </div>
+
+  <div id="code" class="tab">
+    <h2>💻 Code Space</h2>
+    <textarea id="codeEditor" rows="10" placeholder="Write your code here..."></textarea>
+  </div>
+
+  <div id="vault" class="tab">
+    <h2>🔐 Password Vault</h2>
+    <input type="password" id="vaultPassword" placeholder="Enter master password" />
+    <input type="text" id="vaultEntry" placeholder="Website - Username - Password" />
+    <button onclick="saveVault()">Save Entry</button>
+    <textarea id="vaultData" rows="6" readonly></textarea>
+  </div>
+
+  <div id="converter" class="tab">
+    <h2>🌡️ Temperature Converter</h2>
+    <input type="number" id="tempInput" placeholder="Enter temperature" />
+    <select id="tempUnit">
+      <option value="C">Celsius to Fahrenheit</option>
+      <option value="F">Fahrenheit to Celsius</option>
+    </select>
+    <button onclick="convertTemp()">Convert</button>
+    <p id="tempResult"></p>
+  </div>
+
+  <div id="apps" class="tab">
+    <h2>🧩 Spark-App-Hub</h2>
+    <iframe src="https://starryexplorers.github.io/Spark-App-Hub" width="100%" height="400"></iframe>
+  </div>
+
+  <script>
+    function showTab(id) {
+      document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+    }
+
+    // Diary functions
+    function saveDiary() {
+      const pass = document.getElementById("diaryPassword").value;
+      const entry = document.getElementById("diaryEntry").value;
+      if (pass === 'sparkdiary') {
+        localStorage.setItem("diary", entry);
+        alert("Diary saved!");
+      } else {
+        alert("Wrong password!");
+      }
+    }
+    document.getElementById("diaryEntry").value = localStorage.getItem("diary") || "";
+
+    // Code Space
+    document.getElementById("codeEditor").value = localStorage.getItem("code") || "";
+    document.getElementById("codeEditor").addEventListener("input", () => {
+      localStorage.setItem("code", document.getElementById("codeEditor").value);
+    });
+
+    // Vault
+    function saveVault() {
+      const pass = document.getElementById("vaultPassword").value;
+      const entry = document.getElementById("vaultEntry").value;
+      if (pass === 'sparkvault') {
+        let data = localStorage.getItem("vault") || "";
+        data += entry + "\n";
+        localStorage.setItem("vault", data);
+        document.getElementById("vaultData").value = data;
+      } else {
+        alert("Wrong master password!");
+      }
+    }
+    document.getElementById("vaultData").value = localStorage.getItem("vault") || "";
+
+    // Temperature converter
+    function convertTemp() {
+      const val = parseFloat(document.getElementById("tempInput").value);
+      const unit = document.getElementById("tempUnit").value;
+      if (isNaN(val)) {
+        document.getElementById("tempResult").innerText = "Please enter a valid number.";
+        return;
+      }
+      let result = 0;
+      if (unit === "C") {
+        result = (val * 9 / 5) + 32;
+        document.getElementById("tempResult").innerText = `${val}°C = ${result.toFixed(2)}°F`;
+      } else {
+        result = (val - 32) * 5 / 9;
+        document.getElementById("tempResult").innerText = `${val}°F = ${result.toFixed(2)}°C`;
+      }
+    }
+
+    showTab('home');
+  </script>
+</body>
+</html>
